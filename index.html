@@ -5,14 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Interpellationsdebatt i Riksdagen</title>
   
-  <!-- html2canvas för att ta en "skärmdump" av koden -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <style>
     :root {
-      --bg-dark: #072a4a;
-      --bg-mid: #0b3a6b;
-      --text: #f5b400;
+      --bg-color: #f2b300;
+      --text-color: #002045; 
     }
 
     * {
@@ -25,40 +23,76 @@
       width: 100%;
       min-height: 100%;
       font-family: Arial, Helvetica, sans-serif;
-      background: linear-gradient(135deg, var(--bg-dark), var(--bg-mid));
+      background-color: var(--bg-color);
     }
 
     body {
+      position: relative; /* Viktigt för mönsterlagret */
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 40px 20px;
+      overflow-x: hidden;
     }
 
-    /* Instruktionstext i toppen (döljs vid export) */
+    /* --- MÖNSTERLAGER I BAKGRUNDEN --- */
+    #pattern-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0; /* Hamnar bakom texten */
+      pointer-events: none; /* Stör inte klick på texten */
+    }
+
+    /* Mönster 1: Prickar */
+    .pattern-dots {
+      background-image: radial-gradient(rgba(0, 0, 0, 0.08) 2px, transparent 2px);
+      background-size: 30px 30px;
+    }
+
+    /* Mönster 2: Diagonala Linjer */
+    .pattern-lines {
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0, 0, 0, 0.04) 10px, rgba(0, 0, 0, 0.04) 12px);
+    }
+
+    /* Mönster 3: Rutnät */
+    .pattern-grid {
+      background-image: 
+        linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* --- UI OCH INNEHÅLL --- */
     #instructions {
-      position: fixed;
+      position: absolute;
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      color: rgba(255, 255, 255, 0.5);
+      color: rgba(0, 0, 0, 0.4);
       font-size: 14px;
       pointer-events: none;
       font-weight: bold;
       letter-spacing: 1px;
+      z-index: 10;
     }
 
     .slide {
+      position: relative;
+      z-index: 1; /* Håller texten över mönstret */
       width: 100%;
       max-width: 1600px;
       min-height: 900px;
-      color: var(--text);
+      color: var(--text-color);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
       padding: 80px 60px;
+      transition: color 0.3s ease;
     }
 
     .title {
@@ -67,6 +101,7 @@
       line-height: 1.05;
       margin: 0 0 28px 0;
       letter-spacing: -0.02em;
+      text-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Liten skugga så texten poppar mer mot mönstret */
     }
 
     .date {
@@ -83,41 +118,80 @@
       font-weight: 800;
       line-height: 1.18;
       margin: 0;
+      text-shadow: 0 4px 15px rgba(0,0,0,0.05);
     }
 
-    /* subtil glow för premiumkänsla */
-    .title, .content {
-      text-shadow: 0 0 12px rgba(245, 180, 0, 0.15);
-    }
-
-    /* --- STILAR FÖR REDIGERBAR TEXT --- */
+    /* REDIGERBAR TEXT */
     [contenteditable="true"] {
-      outline: none; /* Tar bort den fula blå rutan när man klickar */
+      outline: none;
       cursor: text;
       transition: opacity 0.2s;
     }
-
-    [contenteditable="true"]:hover {
-      opacity: 0.8; /* Visuell hint att texten är interaktiv */
-    }
+    [contenteditable="true"]:hover { opacity: 0.7; }
 
     @media (max-width: 900px) {
-      .slide {
-        min-height: 100vh;
-        padding: 48px 24px;
-      }
-      .date {
-        margin-bottom: 56px;
-      }
+      .slide { min-height: 100vh; padding: 48px 24px; }
+      .date { margin-bottom: 56px; }
     }
 
-    /* --- STILAR FÖR SPARNING OCH KNAPP --- */
+    /* --- VERKTYGSPANEL --- */
+    #toolbar {
+      position: fixed;
+      bottom: 30px;
+      left: 30px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 16px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 9999;
+      font-family: Arial, sans-serif;
+    }
+
+    .tool-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: bold;
+      font-size: 14px;
+      color: #333;
+    }
+
+    /* Färgknappar */
+    .color-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .color-btn:hover { transform: scale(1.1); }
+    .color-btn.active { border-color: #333; }
+
+    /* Mönsterknappar */
+    .pattern-btn {
+      background: #eee;
+      border: 2px solid transparent;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #333;
+    }
+    .pattern-btn:hover { background: #e0e0e0; }
+    .pattern-btn.active { border-color: #333; background: #ddd; }
+
+    /* --- SPARA-KNAPP --- */
     #save-btn {
       position: fixed;
       bottom: 30px;
       right: 30px;
-      background-color: var(--text);
-      color: var(--bg-dark);
+      background-color: #002045;
+      color: #ffffff;
       border: none;
       padding: 16px 24px;
       font-size: 18px;
@@ -128,13 +202,9 @@
       transition: transform 0.2s, background-color 0.2s;
       z-index: 9999;
     }
+    #save-btn:hover { transform: scale(1.05); background-color: #296b9f; }
 
-    #save-btn:hover {
-      transform: scale(1.05);
-      background-color: #ffd043;
-    }
-
-    /* Export-läge (Tvingar fram 16:9 och döljer UI-element) */
+    /* Export-läge */
     body.exporting {
       width: 1920px !important;
       height: 1080px !important;
@@ -144,9 +214,9 @@
       overflow: hidden !important;
     }
 
-    /* Dölj knappen och instruktioner på den sparade bilden */
     body.exporting #save-btn,
-    body.exporting #instructions {
+    body.exporting #instructions,
+    body.exporting #toolbar {
       display: none !important;
     }
   </style>
@@ -155,8 +225,27 @@
   
   <div id="instructions">Klicka på texten för att redigera den</div>
 
+  <!-- LAGER FÖR MÖNSTRET -->
+  <div id="pattern-layer" class=""></div>
+
+  <!-- VERKTYGSPANEL FÖR FÄRG OCH MÖNSTER -->
+  <div id="toolbar">
+    <div class="tool-group">
+      <span>Text:</span>
+      <button class="color-btn" data-color="#296b9f" style="background-color: #296b9f;" title="Mellanblå"></button>
+      <button class="color-btn active" data-color="#002045" style="background-color: #002045;" title="Mörkblå"></button>
+      <button class="color-btn" data-color="#ffffff" style="background-color: #ffffff; border: 1px solid #ccc;" title="Kritvit"></button>
+    </div>
+    <div class="tool-group">
+      <span>Mönster:</span>
+      <button class="pattern-btn active" data-pattern="">Ingen</button>
+      <button class="pattern-btn" data-pattern="pattern-dots">Prickar</button>
+      <button class="pattern-btn" data-pattern="pattern-lines">Linjer</button>
+      <button class="pattern-btn" data-pattern="pattern-grid">Rutnät</button>
+    </div>
+  </div>
+
   <div class="slide">
-    <!-- contenteditable="true" gör texten redigerbar, spellcheck="false" stänger av röda streck -->
     <h1 class="title" contenteditable="true" spellcheck="false">Interpellationsdebatt i Riksdagen</h1>
     <div class="date" contenteditable="true" spellcheck="false">27 mars 2026</div>
     <div class="content" contenteditable="true" spellcheck="false">
@@ -168,8 +257,46 @@
   <button id="save-btn">💾 Spara som 4K</button>
 
   <script>
+    // --- LOGIK FÖR FÄRGBYTE ---
+    const colorBtns = document.querySelectorAll('.color-btn');
+    colorBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const newColor = e.target.getAttribute('data-color');
+        document.documentElement.style.setProperty('--text-color', newColor);
+        
+        colorBtns.forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+
+        colorBtns.forEach(b => {
+            if (b.dataset.color === "#ffffff") {
+                b.style.border = b.classList.contains('active') ? "3px solid #333" : "1px solid #ccc";
+            }
+        });
+      });
+    });
+
+    // --- LOGIK FÖR MÖNSTERBYTE ---
+    const patternBtns = document.querySelectorAll('.pattern-btn');
+    const patternLayer = document.getElementById('pattern-layer');
+    
+    patternBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const newPatternClass = e.target.getAttribute('data-pattern');
+        
+        // Rensa gamla mönster och lägg till det nya (om det finns något)
+        patternLayer.className = '';
+        if (newPatternClass !== "") {
+          patternLayer.classList.add(newPatternClass);
+        }
+
+        // Visuell uppdatering av knapparna
+        patternBtns.forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+      });
+    });
+
+    // --- LOGIK FÖR SPARNING ---
     document.getElementById('save-btn').addEventListener('click', () => {
-      // Ta bort fokus från eventuell textruta man just nu skriver i
       if (document.activeElement) {
         document.activeElement.blur();
       }
@@ -186,12 +313,10 @@
           height: 1080,
           windowWidth: 1920,
           windowHeight: 1080,
-          scale: 2, // 1920x1080 * 2 = 3840x2160 (Korrekt 4K UHD)
-          backgroundColor: null 
+          scale: 2, 
+          backgroundColor: "#f2b300" 
         }).then(canvas => {
           const link = document.createElement('a');
-          
-          // Generera ett filnamn baserat på dagens datum för att hålla ordning på filerna
           const today = new Date().toISOString().split('T')[0];
           link.download = `intro-debatt-${today}-4k.png`;
           
