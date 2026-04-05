@@ -10,7 +10,7 @@
   <style>
     :root {
       --bg-color: #f2b300;
-      --text-color: #002045; 
+      --text-color: #ffffff; 
     }
 
     * {
@@ -36,7 +36,9 @@
     }
 
     /* --- MÖNSTERLAGER I BAKGRUNDEN --- */
-    #pattern-layer {
+    #pattern-layer,
+    #marble-canvas,
+    #shapes-canvas {
       position: absolute;
       top: 0;
       left: 0;
@@ -44,6 +46,11 @@
       height: 100%;
       z-index: 0; /* Hamnar bakom texten */
       pointer-events: none; /* Stör inte klick på texten */
+    }
+
+    #marble-canvas,
+    #shapes-canvas {
+      display: none;
     }
 
     /* Mönster 1: Prickar */
@@ -233,8 +240,8 @@
     <div class="tool-group">
       <span>Text:</span>
       <button class="color-btn" data-color="#296b9f" style="background-color: #296b9f;" title="Mellanblå"></button>
-      <button class="color-btn active" data-color="#002045" style="background-color: #002045;" title="Mörkblå"></button>
-      <button class="color-btn" data-color="#ffffff" style="background-color: #ffffff; border: 1px solid #ccc;" title="Kritvit"></button>
+      <button class="color-btn" data-color="#002045" style="background-color: #002045;" title="Mörkblå"></button>
+      <button class="color-btn active" data-color="#ffffff" style="background-color: #ffffff; border: 3px solid #333;" title="Kritvit"></button>
     </div>
     <div class="tool-group">
       <span>Mönster:</span>
@@ -242,9 +249,13 @@
       <button class="pattern-btn" data-pattern="pattern-dots">Prickar</button>
       <button class="pattern-btn" data-pattern="pattern-lines">Linjer</button>
       <button class="pattern-btn" data-pattern="pattern-grid">Rutnät</button>
+      <button class="pattern-btn" data-pattern="marble">Marmor</button>
+      <button class="pattern-btn" data-pattern="shapes">Cirklar/Fyrkanter</button>
     </div>
   </div>
 
+  <canvas id="marble-canvas" aria-hidden="true"></canvas>
+  <canvas id="shapes-canvas" aria-hidden="true"></canvas>
   <div class="slide">
     <h1 class="title" contenteditable="true" spellcheck="false">Interpellationsdebatt i Riksdagen</h1>
     <div class="date" contenteditable="true" spellcheck="false">27 mars 2026</div>
@@ -278,21 +289,278 @@
     // --- LOGIK FÖR MÖNSTERBYTE ---
     const patternBtns = document.querySelectorAll('.pattern-btn');
     const patternLayer = document.getElementById('pattern-layer');
+    const marbleCanvas = document.getElementById('marble-canvas');
+    const marbleCtx = marbleCanvas.getContext('2d');
+    const shapesCanvas = document.getElementById('shapes-canvas');
+    const shapesCtx = shapesCanvas.getContext('2d');
+
+    function hexToRgb(hex) {
+      const clean = hex.replace('#', '');
+      const bigint = parseInt(clean, 16);
+      return {
+        r: (bigint >> 16) & 255,
+        g: (bigint >> 8) & 255,
+        b: bigint & 255
+      };
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function lightenColor(rgb, amount) {
+      return {
+        r: clamp(Math.round(rgb.r + (255 - rgb.r) * amount), 0, 255),
+        g: clamp(Math.round(rgb.g + (255 - rgb.g) * amount), 0, 255),
+        b: clamp(Math.round(rgb.b + (255 - rgb.b) * amount), 0, 255)
+      };
+    }
+
+    function rgbString(color, alpha = 1) {
+      return `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+    }
+
+    function jitterWidth(base, variation) {
+      return Math.max(0.6, base + (Math.random() - 0.5) * variation);
+    }
+
+    function resizeMarbleCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      marbleCanvas.width = Math.floor(window.innerWidth * dpr);
+      marbleCanvas.height = Math.floor(window.innerHeight * dpr);
+      marbleCanvas.style.width = `${window.innerWidth}px`;
+      marbleCanvas.style.height = `${window.innerHeight}px`;
+      marbleCtx.setTransform(1, 0, 0, 1, 0, 0);
+      marbleCtx.scale(dpr, dpr);
+    }
+
+    function resizeShapesCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      shapesCanvas.width = Math.floor(window.innerWidth * dpr);
+      shapesCanvas.height = Math.floor(window.innerHeight * dpr);
+      shapesCanvas.style.width = `${window.innerWidth}px`;
+      shapesCanvas.style.height = `${window.innerHeight}px`;
+      shapesCtx.setTransform(1, 0, 0, 1, 0, 0);
+      shapesCtx.scale(dpr, dpr);
+    }
+
+    function drawSoftTexture(width, height, baseRgb) {
+      marbleCtx.fillStyle = rgbString(baseRgb, 1);
+      marbleCtx.fillRect(0, 0, width, height);
+
+      for (let i = 0; i < 140; i++) {
+        const alpha = 0.02 + Math.random() * 0.035;
+        const radius = 80 + Math.random() * 240;
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+
+        const glow = lightenColor(baseRgb, 0.10 + Math.random() * 0.10);
+        const grad = marbleCtx.createRadialGradient(x, y, 0, x, y, radius);
+        grad.addColorStop(0, rgbString(glow, alpha));
+        grad.addColorStop(1, rgbString(glow, 0));
+
+        marbleCtx.fillStyle = grad;
+        marbleCtx.beginPath();
+        marbleCtx.arc(x, y, radius, 0, Math.PI * 2);
+        marbleCtx.fill();
+      }
+    }
+
+    function drawVein(width, height, veinRgb) {
+      const startSide = Math.floor(Math.random() * 4);
+      let x;
+      let y;
+
+      if (startSide === 0) {
+        x = Math.random() * width;
+        y = -40;
+      } else if (startSide === 1) {
+        x = width + 40;
+        y = Math.random() * height;
+      } else if (startSide === 2) {
+        x = Math.random() * width;
+        y = height + 40;
+      } else {
+        x = -40;
+        y = Math.random() * height;
+      }
+
+      const points = [];
+      const centerX = width / 2;
+      const centerY = height / 2;
+      let angle = Math.atan2(centerY - y, centerX - x) + (Math.random() - 0.5) * 0.9;
+      let enteredCanvas = false;
+      let steps = 0;
+
+      while (steps < 40) {
+        points.push({ x, y });
+
+        const step = 50 + Math.random() * 130;
+        angle += (Math.random() - 0.5) * 1.2;
+
+        x += Math.cos(angle) * step;
+        y += Math.sin(angle) * step;
+        steps += 1;
+
+        const insideCanvas = x >= 0 && x <= width && y >= 0 && y <= height;
+        if (insideCanvas) {
+          enteredCanvas = true;
+        } else if (enteredCanvas) {
+          points.push({ x, y });
+          break;
+        }
+      }
+
+      marbleCtx.save();
+      marbleCtx.lineCap = 'round';
+      marbleCtx.lineJoin = 'round';
+      const widthBase = 1.5 + Math.random() * 2.5;
+      const alphaBase = 0.18 + Math.random() * 0.22;
+
+      for (let layer = 0; layer < 3; layer++) {
+        marbleCtx.beginPath();
+        marbleCtx.moveTo(points[0].x, points[0].y);
+
+        for (let i = 1; i < points.length - 1; i++) {
+          const midX = (points[i].x + points[i + 1].x) / 2;
+          const midY = (points[i].y + points[i + 1].y) / 2;
+          marbleCtx.quadraticCurveTo(points[i].x, points[i].y, midX, midY);
+        }
+
+        marbleCtx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
+
+        marbleCtx.strokeStyle = rgbString(veinRgb, alphaBase / (layer + 0.7));
+        marbleCtx.lineWidth = jitterWidth(widthBase * (3 - layer), 2.4 + layer * 0.5);
+        marbleCtx.stroke();
+      }
+
+      marbleCtx.restore();
+    }
+
+    function drawMarbleBackground() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const baseRgb = hexToRgb('#f2b400');
+      const veinRgb = lightenColor(baseRgb, 0.45 + Math.random() * 0.18);
+
+      drawSoftTexture(width, height, baseRgb);
+
+      const veinCount = 4 + Math.floor(Math.random() * 4);
+      for (let i = 0; i < veinCount; i++) {
+        drawVein(width, height, veinRgb);
+      }
+
+      for (let i = 0; i < 60; i++) {
+        const alpha = 0.015 + Math.random() * 0.03;
+        const size = 30 + Math.random() * 120;
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const mist = lightenColor(baseRgb, 0.20 + Math.random() * 0.15);
+
+        marbleCtx.fillStyle = rgbString(mist, alpha);
+        marbleCtx.beginPath();
+        marbleCtx.ellipse(
+          x,
+          y,
+          size * (0.8 + Math.random() * 0.5),
+          size * (0.4 + Math.random() * 0.3),
+          Math.random() * Math.PI,
+          0,
+          Math.PI * 2
+        );
+        marbleCtx.fill();
+      }
+    }
+
+    function drawShapesBackground() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const baseRgb = hexToRgb('#f2b300');
+
+      shapesCtx.clearRect(0, 0, width, height);
+      shapesCtx.fillStyle = rgbString(baseRgb, 1);
+      shapesCtx.fillRect(0, 0, width, height);
+
+      for (let i = 0; i < 78; i++) {
+        const size = 40 + Math.random() * 180;
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const fill = lightenColor(baseRgb, 0.16 + Math.random() * 0.34);
+        const alpha = 0.2 + Math.random() * 0.24;
+        const rotation = Math.random() * Math.PI;
+
+        shapesCtx.save();
+        shapesCtx.translate(x, y);
+        shapesCtx.rotate(rotation);
+        shapesCtx.fillStyle = rgbString(fill, alpha);
+
+        if (Math.random() < 0.5) {
+          shapesCtx.beginPath();
+          shapesCtx.arc(0, 0, size / 2, 0, Math.PI * 2);
+          shapesCtx.fill();
+        } else {
+          const edge = size * (0.75 + Math.random() * 0.4);
+          shapesCtx.fillRect(-edge / 2, -edge / 2, edge, edge);
+        }
+
+        if (Math.random() < 0.7) {
+          shapesCtx.strokeStyle = rgbString(lightenColor(fill, 0.28), 0.28 + Math.random() * 0.2);
+          shapesCtx.lineWidth = 2 + Math.random() * 4;
+
+          if (Math.random() < 0.5) {
+            shapesCtx.beginPath();
+            shapesCtx.arc(0, 0, size * (0.3 + Math.random() * 0.2), 0, Math.PI * 2);
+            shapesCtx.stroke();
+          } else {
+            const innerEdge = size * (0.32 + Math.random() * 0.24);
+            shapesCtx.strokeRect(-innerEdge / 2, -innerEdge / 2, innerEdge, innerEdge);
+          }
+        }
+
+        shapesCtx.restore();
+      }
+    }
+
+    function setPattern(newPatternClass) {
+      patternLayer.className = '';
+      marbleCanvas.style.display = 'none';
+      shapesCanvas.style.display = 'none';
+
+      if (newPatternClass === 'marble') {
+        resizeMarbleCanvas();
+        drawMarbleBackground();
+        marbleCanvas.style.display = 'block';
+        return;
+      }
+
+      if (newPatternClass === 'shapes') {
+        resizeShapesCanvas();
+        drawShapesBackground();
+        shapesCanvas.style.display = 'block';
+        return;
+      }
+
+      if (newPatternClass !== '') {
+        patternLayer.classList.add(newPatternClass);
+      }
+    }
     
     patternBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
         const newPatternClass = e.target.getAttribute('data-pattern');
-        
-        // Rensa gamla mönster och lägg till det nya (om det finns något)
-        patternLayer.className = '';
-        if (newPatternClass !== "") {
-          patternLayer.classList.add(newPatternClass);
-        }
+        setPattern(newPatternClass);
 
         // Visuell uppdatering av knapparna
         patternBtns.forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
       });
+    });
+
+    window.addEventListener('resize', () => {
+      const activePatternBtn = document.querySelector('.pattern-btn.active');
+      if (activePatternBtn && (activePatternBtn.dataset.pattern === 'marble' || activePatternBtn.dataset.pattern === 'shapes')) {
+        setPattern(activePatternBtn.dataset.pattern);
+      }
     });
 
     // --- LOGIK FÖR SPARNING ---
