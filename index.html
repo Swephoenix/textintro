@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interpellationsdebatt i Riksdagen</title>
+  
+  <!-- html2canvas för att ta en "skärmdump" av koden -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #072a4a;
+      --bg-mid: #0b3a6b;
+      --text: #f5b400;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(135deg, var(--bg-dark), var(--bg-mid));
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    /* Instruktionstext i toppen (döljs vid export) */
+    #instructions {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 14px;
+      pointer-events: none;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .slide {
+      width: 100%;
+      max-width: 1600px;
+      min-height: 900px;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 80px 60px;
+    }
+
+    .title {
+      font-size: clamp(42px, 6vw, 88px);
+      font-weight: 800;
+      line-height: 1.05;
+      margin: 0 0 28px 0;
+      letter-spacing: -0.02em;
+    }
+
+    .date {
+      font-size: clamp(28px, 3.2vw, 56px);
+      font-weight: 700;
+      line-height: 1.15;
+      margin: 0 0 90px 0;
+      opacity: 0.9;
+    }
+
+    .content {
+      max-width: 1100px;
+      font-size: clamp(34px, 4vw, 70px);
+      font-weight: 800;
+      line-height: 1.18;
+      margin: 0;
+    }
+
+    /* subtil glow för premiumkänsla */
+    .title, .content {
+      text-shadow: 0 0 12px rgba(245, 180, 0, 0.15);
+    }
+
+    /* --- STILAR FÖR REDIGERBAR TEXT --- */
+    [contenteditable="true"] {
+      outline: none; /* Tar bort den fula blå rutan när man klickar */
+      cursor: text;
+      transition: opacity 0.2s;
+    }
+
+    [contenteditable="true"]:hover {
+      opacity: 0.8; /* Visuell hint att texten är interaktiv */
+    }
+
+    @media (max-width: 900px) {
+      .slide {
+        min-height: 100vh;
+        padding: 48px 24px;
+      }
+      .date {
+        margin-bottom: 56px;
+      }
+    }
+
+    /* --- STILAR FÖR SPARNING OCH KNAPP --- */
+    #save-btn {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background-color: var(--text);
+      color: var(--bg-dark);
+      border: none;
+      padding: 16px 24px;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      transition: transform 0.2s, background-color 0.2s;
+      z-index: 9999;
+    }
+
+    #save-btn:hover {
+      transform: scale(1.05);
+      background-color: #ffd043;
+    }
+
+    /* Export-läge (Tvingar fram 16:9 och döljer UI-element) */
+    body.exporting {
+      width: 1920px !important;
+      height: 1080px !important;
+      min-height: 1080px !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow: hidden !important;
+    }
+
+    /* Dölj knappen och instruktioner på den sparade bilden */
+    body.exporting #save-btn,
+    body.exporting #instructions {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  
+  <div id="instructions">Klicka på texten för att redigera den</div>
+
+  <div class="slide">
+    <!-- contenteditable="true" gör texten redigerbar, spellcheck="false" stänger av röda streck -->
+    <h1 class="title" contenteditable="true" spellcheck="false">Interpellationsdebatt i Riksdagen</h1>
+    <div class="date" contenteditable="true" spellcheck="false">27 mars 2026</div>
+    <div class="content" contenteditable="true" spellcheck="false">
+      Jakt och fiske på statlig mark<br>
+      av Elsa Widding till Landsbygdsminister Peter Kullgren
+    </div>
+  </div>
+
+  <button id="save-btn">💾 Spara som 4K</button>
+
+  <script>
+    document.getElementById('save-btn').addEventListener('click', () => {
+      // Ta bort fokus från eventuell textruta man just nu skriver i
+      if (document.activeElement) {
+        document.activeElement.blur();
+      }
+
+      const btn = document.getElementById('save-btn');
+      const originalText = btn.innerText;
+      btn.innerText = "⏳ Sparar...";
+      
+      document.body.classList.add('exporting');
+
+      setTimeout(() => {
+        html2canvas(document.body, {
+          width: 1920,
+          height: 1080,
+          windowWidth: 1920,
+          windowHeight: 1080,
+          scale: 2, // 1920x1080 * 2 = 3840x2160 (Korrekt 4K UHD)
+          backgroundColor: null 
+        }).then(canvas => {
+          const link = document.createElement('a');
+          
+          // Generera ett filnamn baserat på dagens datum för att hålla ordning på filerna
+          const today = new Date().toISOString().split('T')[0];
+          link.download = `intro-debatt-${today}-4k.png`;
+          
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+
+          document.body.classList.remove('exporting');
+          btn.innerText = originalText;
+        }).catch(err => {
+          console.error("Fel vid skapande av bild: ", err);
+          document.body.classList.remove('exporting');
+          btn.innerText = "❌ Något gick fel";
+          setTimeout(() => btn.innerText = originalText, 3000);
+        });
+      }, 150);
+    });
+  </script>
+</body>
+</html>
