@@ -287,12 +287,15 @@
     });
 
     // --- LOGIK FÖR MÖNSTERBYTE ---
+    const EXPORT_WIDTH = 1920;
+    const EXPORT_HEIGHT = 1080;
     const patternBtns = document.querySelectorAll('.pattern-btn');
     const patternLayer = document.getElementById('pattern-layer');
     const marbleCanvas = document.getElementById('marble-canvas');
     const marbleCtx = marbleCanvas.getContext('2d');
     const shapesCanvas = document.getElementById('shapes-canvas');
     const shapesCtx = shapesCanvas.getContext('2d');
+    let activePattern = '';
 
     function hexToRgb(hex) {
       const clean = hex.replace('#', '');
@@ -324,24 +327,22 @@
       return Math.max(0.6, base + (Math.random() - 0.5) * variation);
     }
 
-    function resizeMarbleCanvas() {
+    function resizeCanvasToViewport(canvas, ctx, width = window.innerWidth, height = window.innerHeight) {
       const dpr = window.devicePixelRatio || 1;
-      marbleCanvas.width = Math.floor(window.innerWidth * dpr);
-      marbleCanvas.height = Math.floor(window.innerHeight * dpr);
-      marbleCanvas.style.width = `${window.innerWidth}px`;
-      marbleCanvas.style.height = `${window.innerHeight}px`;
-      marbleCtx.setTransform(1, 0, 0, 1, 0, 0);
-      marbleCtx.scale(dpr, dpr);
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
     }
 
-    function resizeShapesCanvas() {
-      const dpr = window.devicePixelRatio || 1;
-      shapesCanvas.width = Math.floor(window.innerWidth * dpr);
-      shapesCanvas.height = Math.floor(window.innerHeight * dpr);
-      shapesCanvas.style.width = `${window.innerWidth}px`;
-      shapesCanvas.style.height = `${window.innerHeight}px`;
-      shapesCtx.setTransform(1, 0, 0, 1, 0, 0);
-      shapesCtx.scale(dpr, dpr);
+    function resizeMarbleCanvas(width = window.innerWidth, height = window.innerHeight) {
+      resizeCanvasToViewport(marbleCanvas, marbleCtx, width, height);
+    }
+
+    function resizeShapesCanvas(width = window.innerWidth, height = window.innerHeight) {
+      resizeCanvasToViewport(shapesCanvas, shapesCtx, width, height);
     }
 
     function drawSoftTexture(width, height, baseRgb) {
@@ -437,9 +438,7 @@
       marbleCtx.restore();
     }
 
-    function drawMarbleBackground() {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
+    function drawMarbleBackground(width = window.innerWidth, height = window.innerHeight) {
       const baseRgb = hexToRgb('#f2b400');
       const veinRgb = lightenColor(baseRgb, 0.45 + Math.random() * 0.18);
 
@@ -472,9 +471,7 @@
       }
     }
 
-    function drawShapesBackground() {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
+    function drawShapesBackground(width = window.innerWidth, height = window.innerHeight) {
       const baseRgb = hexToRgb('#f2b300');
 
       shapesCtx.clearRect(0, 0, width, height);
@@ -521,22 +518,33 @@
       }
     }
 
+    function renderDynamicPattern(patternName, width = window.innerWidth, height = window.innerHeight) {
+      if (patternName === 'marble') {
+        resizeMarbleCanvas(width, height);
+        drawMarbleBackground(width, height);
+        marbleCanvas.style.display = 'block';
+      }
+
+      if (patternName === 'shapes') {
+        resizeShapesCanvas(width, height);
+        drawShapesBackground(width, height);
+        shapesCanvas.style.display = 'block';
+      }
+    }
+
     function setPattern(newPatternClass) {
+      activePattern = newPatternClass;
       patternLayer.className = '';
       marbleCanvas.style.display = 'none';
       shapesCanvas.style.display = 'none';
 
       if (newPatternClass === 'marble') {
-        resizeMarbleCanvas();
-        drawMarbleBackground();
-        marbleCanvas.style.display = 'block';
+        renderDynamicPattern('marble');
         return;
       }
 
       if (newPatternClass === 'shapes') {
-        resizeShapesCanvas();
-        drawShapesBackground();
-        shapesCanvas.style.display = 'block';
+        renderDynamicPattern('shapes');
         return;
       }
 
@@ -557,9 +565,8 @@
     });
 
     window.addEventListener('resize', () => {
-      const activePatternBtn = document.querySelector('.pattern-btn.active');
-      if (activePatternBtn && (activePatternBtn.dataset.pattern === 'marble' || activePatternBtn.dataset.pattern === 'shapes')) {
-        setPattern(activePatternBtn.dataset.pattern);
+      if (activePattern === 'marble' || activePattern === 'shapes') {
+        renderDynamicPattern(activePattern);
       }
     });
 
@@ -576,11 +583,15 @@
       document.body.classList.add('exporting');
 
       setTimeout(() => {
+        if (activePattern === 'marble' || activePattern === 'shapes') {
+          renderDynamicPattern(activePattern, EXPORT_WIDTH, EXPORT_HEIGHT);
+        }
+
         html2canvas(document.body, {
-          width: 1920,
-          height: 1080,
-          windowWidth: 1920,
-          windowHeight: 1080,
+          width: EXPORT_WIDTH,
+          height: EXPORT_HEIGHT,
+          windowWidth: EXPORT_WIDTH,
+          windowHeight: EXPORT_HEIGHT,
           scale: 2, 
           backgroundColor: "#f2b300" 
         }).then(canvas => {
@@ -592,10 +603,16 @@
           link.click();
 
           document.body.classList.remove('exporting');
+          if (activePattern === 'marble' || activePattern === 'shapes') {
+            renderDynamicPattern(activePattern);
+          }
           btn.innerText = originalText;
         }).catch(err => {
           console.error("Fel vid skapande av bild: ", err);
           document.body.classList.remove('exporting');
+          if (activePattern === 'marble' || activePattern === 'shapes') {
+            renderDynamicPattern(activePattern);
+          }
           btn.innerText = "❌ Något gick fel";
           setTimeout(() => btn.innerText = originalText, 3000);
         });
