@@ -31,7 +31,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 40px 20px;
+      padding: 40px 20px 140px;
       overflow-x: hidden;
     }
 
@@ -78,12 +78,14 @@
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
+      width: calc(100% - 32px);
       color: rgba(0, 0, 0, 0.4);
       font-size: 14px;
       pointer-events: none;
       font-weight: bold;
       letter-spacing: 1px;
       z-index: 10;
+      text-align: center;
     }
 
     .slide {
@@ -102,30 +104,16 @@
       transition: color 0.3s ease;
     }
 
-    .title {
-      font-size: clamp(42px, 6vw, 88px);
-      font-weight: 800;
-      line-height: 1.05;
-      margin: 0 0 28px 0;
-      letter-spacing: -0.02em;
-      text-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Liten skugga så texten poppar mer mot mönstret */
-    }
-
-    .date {
-      font-size: clamp(28px, 3.2vw, 56px);
-      font-weight: 700;
-      line-height: 1.15;
-      margin: 0 0 90px 0;
-      opacity: 0.9;
-    }
-
-    .content {
+    .editor {
+      width: 100%;
       max-width: 1100px;
       font-size: clamp(34px, 4vw, 70px);
       font-weight: 800;
-      line-height: 1.18;
+      line-height: 1.12;
       margin: 0;
-      text-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      letter-spacing: -0.02em;
+      text-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Liten skugga så texten poppar mer mot mönstret */
+      overflow-wrap: anywhere;
     }
 
     /* REDIGERBAR TEXT */
@@ -138,7 +126,135 @@
 
     @media (max-width: 900px) {
       .slide { min-height: 100vh; padding: 48px 24px; }
-      .date { margin-bottom: 56px; }
+    }
+
+    @media (max-width: 700px) {
+      body {
+        align-items: flex-start;
+        padding: 0 12px calc(164px + env(safe-area-inset-bottom, 0px));
+      }
+
+      #instructions {
+        top: 14px;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .slide {
+        min-height: 100svh;
+        justify-content: flex-start;
+        width: 100%;
+        padding: 88px 0 32px;
+      }
+
+      .editor {
+        width: 100%;
+        max-width: 340px;
+        margin: 0 auto;
+        font-size: clamp(28px, 7vw, 34px);
+        line-height: 1.12;
+        text-wrap: balance;
+        overflow-wrap: break-word;
+      }
+
+      #toolbar {
+        left: 12px;
+        right: 12px;
+        bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+        width: auto;
+        padding: 12px 14px;
+        gap: 10px;
+        border-radius: 18px;
+        background: rgba(248, 241, 228, 0.92);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
+      }
+
+      .tool-group {
+        flex-wrap: wrap;
+        gap: 8px;
+        font-size: 13px;
+        align-items: center;
+      }
+
+      .tool-group span {
+        flex: 1 0 100%;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(0, 32, 69, 0.72);
+      }
+
+      .pattern-btn {
+        padding: 7px 10px;
+        font-size: 11px;
+        border-radius: 999px;
+        border-width: 1px;
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      #save-btn {
+        left: 24px;
+        right: 24px;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        width: auto;
+        padding: 13px 16px;
+        font-size: 15px;
+        border-radius: 16px;
+        box-shadow: 0 18px 36px rgba(0,0,0,0.28);
+      }
+    }
+
+    @media (max-width: 420px) {
+      body {
+        padding: 0 10px calc(156px + env(safe-area-inset-bottom, 0px));
+      }
+
+      #instructions {
+        font-size: 11px;
+      }
+
+      .slide {
+        padding: 80px 0 28px;
+      }
+
+      .editor {
+        max-width: 312px;
+        font-size: clamp(19px, 6vw, 26px);
+        line-height: 1.12;
+      }
+
+      #toolbar {
+        bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+        padding: 10px 11px;
+        gap: 8px;
+        border-radius: 16px;
+      }
+
+      .tool-group {
+        gap: 6px;
+        font-size: 12px;
+      }
+
+      .color-btn {
+        width: 26px;
+        height: 26px;
+      }
+
+      .pattern-btn {
+        padding: 6px 9px;
+        border-width: 1px;
+      }
+
+      #save-btn {
+        left: 20px;
+        right: 20px;
+        padding: 12px 14px;
+        font-size: 14px;
+        border-radius: 14px;
+      }
     }
 
     /* --- VERKTYGSPANEL --- */
@@ -226,6 +342,33 @@
     body.exporting #toolbar {
       display: none !important;
     }
+
+    @media (max-width: 700px) {
+      #toolbar {
+        left: 12px;
+        right: 12px;
+        bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+        width: auto;
+      }
+
+      #save-btn {
+        left: 24px;
+        right: 24px;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        width: auto;
+      }
+    }
+
+    @media (max-width: 420px) {
+      #toolbar {
+        bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+      }
+
+      #save-btn {
+        left: 20px;
+        right: 20px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -257,9 +400,9 @@
   <canvas id="marble-canvas" aria-hidden="true"></canvas>
   <canvas id="shapes-canvas" aria-hidden="true"></canvas>
   <div class="slide">
-    <h1 class="title" contenteditable="true" spellcheck="false">Interpellationsdebatt i Riksdagen</h1>
-    <div class="date" contenteditable="true" spellcheck="false">27 mars 2026</div>
-    <div class="content" contenteditable="true" spellcheck="false">
+    <div class="editor" contenteditable="true" spellcheck="false">
+      Interpellationsdebatt i Riksdagen<br><br>
+      27 mars 2026<br><br>
       Jakt och fiske på statlig mark<br>
       av Elsa Widding till Landsbygdsminister Peter Kullgren
     </div>
